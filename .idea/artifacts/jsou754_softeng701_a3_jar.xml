@@ -1,0 +1,10 @@
+<component name="ArtifactManager">
+  <artifact type="jar" build-on-make="true" name="jsou754_softeng701_a3:jar">
+    <output-path>$PROJECT_DIR$</output-path>
+    <root id="archive" name="kalah_resources.jar">
+      <element id="module-output" name="kalah_resources" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/kalah.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/junit-3.8.2.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>
