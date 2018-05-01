@@ -1,10 +1,15 @@
 package kalah;
 
-public class House implements Pit {
+public class Store implements Pit{
+
     private int seeds;
 
-    protected House(int seeds){
+    protected Store(int seeds){
         this.seeds = seeds;
+    }
+
+    public void addCapturedSeeds(int seeds){
+        this.seeds += seeds;
     }
 
     @Override

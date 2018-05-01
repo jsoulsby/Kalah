@@ -9,175 +9,174 @@ import com.qualitascorpus.testsupport.MockIO;
  */
 public class Kalah {
 
-    public final int QUIT_GAME = -1;
-    public final int TIE = 0;
-    public final int P1WIN = 1;
-    public final int P2WIN = 2;
-    public final int P1 = 1;
-    public final int P2 = 2;
-    public final int NUMBER_OF_HOUSES = 6;
-    public final int STARTING_SEEDS = 4;
+    public static final int QUIT_GAME = -1;
+    public static final int TIE = 0;
+    public static final int P1WIN = 1;
+    public static final int P2WIN = 2;
+    public static final int P1 = 1;
+    public static final int P2 = 2;
+    public static final int NUMBER_OF_HOUSES = 6;
+    public static final int STARTING_SEEDS = 4;
 
     public static void main(String[] args) {
         new Kalah().play(new MockIO());
     }
 
     public void play(IO io) {
-        initialiseBoard(NUMBER_OF_HOUSES, STARTING_SEEDS);
-        drawBoard(io);
+        initialiseGame(io);
         while (!isGameOver()){
-            makeTurn(io);
+            makeTurn();
         }
         if (!quitGame){
-            drawWinner(io);
+            userIO.drawWinner(playerOne.getScore(), playerTwo.getScore(), calculateWinner(), board);
         }
     }
 
     private Board board;
-    private int player;
+    private int currentPlayer;
     private boolean quitGame = false;
-    private int playerOneScore;
-    private int playerTwoScore;
+    private UserIO userIO;
+    private Player playerOne;
+    private Player playerTwo;
 
-    public void initialiseBoard(int numberOfHouses, int startingSeeds) {
-        player = P1;
-        playerOneScore = 0;
-        playerTwoScore = 0;
-        board = new Board(numberOfHouses, startingSeeds);
+
+
+    protected void initialiseGame(IO io) {
+        currentPlayer = P1;
+        playerOne = new Player();
+        playerTwo = new Player();
+        board = new Board(NUMBER_OF_HOUSES, STARTING_SEEDS);
+        userIO = new UserIO(io);
+        userIO.drawBoard(board);
     }
 
-    public void makeTurn(IO io){
-        int house = readInputHouse(io);
-        if (house != QUIT_GAME){
-            if (selectedHouseIsEmpty(house)){
-                drawMoveAgain(io);
+    protected void makeTurn(){
+        int selectedHouse = userIO.readInputHouse(currentPlayer);
+        if (selectedHouse != QUIT_GAME){
+            if (selectedHouseIsEmpty(selectedHouse)){
+                userIO.drawMoveAgain(board);
             } else {
-                int seeds = board.getHouse(player,house).getSeeds();
+                int remainingSeeds = board.getHouse(currentPlayer,selectedHouse).getSeeds();
 
                 // Keep track of wraps
-                int playerCounter = player;
+                int playerCounter = currentPlayer;
 
                 // Empty seeds of selected house
-                board.getHouse(player,house).setSeeds(0);
+                board.getHouse(currentPlayer,selectedHouse).emptySeeds();
 
                 // Loop while there are seeds left to distribute, starts at selected house + 1 if P1's turn
-                // otherwise starts at selected house -1 if P2's turn
-                while (seeds > 0){
+                // otherwise starts at selected house - 1 if P2's turn
+                while (remainingSeeds > 0){
                     // Determine what side of board we are on
                     if (playerCounter == P1) {
-                        house++;
+                        selectedHouse++;
                         //Check if we need to wrap at a store
-                        if (house == NUMBER_OF_HOUSES + 1) {
+                        if (selectedHouse == NUMBER_OF_HOUSES + 1) {
                             playerCounter = P2;
 
                             // Only add to store if it is the correct players turn
-                            if (player == P1) {
-                                board.incrementSeeds(board.getPlayerOneStore(), 1);
+                            if (currentPlayer == P1) {
+                                board.getPlayerOneStore().incrementSeeds();
                             } else {
                                 //Compensate for not putting anything in the store, essentially skipping the store
-                                seeds++;
+                                remainingSeeds++;
                             }
                         } else {
-                            board.incrementSeeds(board.getHouse(P1, house), 1);
+                            board.getHouse(P1, selectedHouse).incrementSeeds();
                             //Check if a capture has been made and change player
-                            if (seeds == 1) {
-                                if (player == P1) {
-                                    checkCapture(P1, house);
+                            if (remainingSeeds == 1) {
+                                if (currentPlayer == P1) {
+                                    checkCapture(P1, selectedHouse);
                                 }
-                                changePlayer();
+                                changeCurrentPlayer();
                             }
                         }
                     }else {
-                        house--;
+                        selectedHouse--;
                         //Check if we need to wrap at a store
-                        if (house < 1){
+                        if (selectedHouse < 1){
                             playerCounter = P1;
-                            if (player == P2) {
-                                board.incrementSeeds(board.getPlayerTwoStore(), 1);
+                            if (currentPlayer == P2) {
+                                board.getPlayerTwoStore().incrementSeeds();
                             } else {
                                 //Compensate for not putting anything in the store, essentially skipping the store
-                                seeds++;
+                                remainingSeeds++;
                             }
                         } else {
-                            board.incrementSeeds(board.getHouse(P2,house), 1);
+                            board.getHouse(P2,selectedHouse).incrementSeeds();
                             //Check if a capture has been made and change player
-                            if (seeds == 1) {
-                                if(player == P2) {
-                                    checkCapture(P2, house);
+                            if (remainingSeeds == 1) {
+                                if(currentPlayer == P2) {
+                                    checkCapture(P2, selectedHouse);
                                 }
-                                changePlayer();
+                                changeCurrentPlayer();
                             }
                         }
                     }
-                    seeds--;
+                    remainingSeeds--;
                 }
-                drawBoard(io);
+                // Draw board and update scores after final seed is sown
+                userIO.drawBoard(board);
+                updatePlayerScores();
             }
         } else {
-            quitGame(io);
+            // Player has quit game
+            quitGame = true;
+            userIO.drawGameOver();
+            userIO.drawBoard(board);
         }
     }
 
-    public int readInputHouse(IO io){
-        int house;
-        if (player == P1){
-            house = io.readInteger("Player P1's turn - Specify house number or 'q' to quit: ", 1, NUMBER_OF_HOUSES, QUIT_GAME, "q");
-        } else {
-            house = io.readInteger("Player P2's turn - Specify house number or 'q' to quit: ", 1, NUMBER_OF_HOUSES, QUIT_GAME, "q");
-            if (house != QUIT_GAME) {
-                house = (NUMBER_OF_HOUSES + 1 - house);
-            }
-        }
-        return house;
+    protected boolean selectedHouseIsEmpty(int house){
+        return board.getHouse(currentPlayer,house).isEmpty();
     }
 
-    public boolean selectedHouseIsEmpty(int house){
-        if (board.getHouse(player,house).isEmpty()) {
-            return true;
-        }
-        return false;
-    }
-
-    public void drawMoveAgain(IO io){
-        io.println("House is empty. Move again.");
-        drawBoard(io);
-    }
-
-    public void checkCapture(int player, int house){
+    protected void checkCapture(int player, int house){
         if (board.getHouse(player,house).getSeeds() == 1){
             if (player == P1) {
                 if (board.getHouse(P2,house).getSeeds() > 0) {
-                    board.incrementSeeds(board.getPlayerOneStore(), board.getHouse(P2, house).getSeeds() + 1);
-                    board.getHouse(P1, house).setSeeds(0);
-                    board.getHouse(P2, house).setSeeds(0);
+                    board.getPlayerOneStore().addCapturedSeeds(board.getHouse(P2, house).getSeeds() + 1);
+                    board.getHouse(P1, house).emptySeeds();
+                    board.getHouse(P2, house).emptySeeds();
                 }
             } else {
                 if (board.getHouse(P1,house).getSeeds() > 0) {
-                    board.incrementSeeds(board.getPlayerTwoStore(), board.getHouse(P1, house).getSeeds() + 1);
-                    board.getHouse(P1, house).setSeeds(0);
-                    board.getHouse(P2, house).setSeeds(0);
+                    board.getPlayerTwoStore().addCapturedSeeds(board.getHouse(P1, house).getSeeds() + 1);
+                    board.getHouse(P1, house).emptySeeds();
+                    board.getHouse(P2, house).emptySeeds();
                 }
             }
         }
     }
 
-    public void changePlayer(){
-        if (player == P1){
-            player = P2;
+    protected void changeCurrentPlayer(){
+        if (currentPlayer == P1){
+            currentPlayer = P2;
         } else {
-            player = P1;
+            currentPlayer = P1;
         }
     }
 
-    public void quitGame(IO io){
-        io.println("Game over");
-        drawBoard(io);
-        quitGame = true;
+    protected void updatePlayerScores(){
+        int playerScore;
+        // Update player 1 score
+        playerScore = board.getPlayerOneStore().getSeeds();
+        for (House house : board.getPlayerHouses(1)) {
+            playerScore += house.getSeeds();
+        }
+
+        // Update player 2 score
+        playerOne.setScore(playerScore);
+        playerScore = board.getPlayerTwoStore().getSeeds();
+        for (House house : board.getPlayerHouses(2)) {
+            playerScore += house.getSeeds();
+        }
+        playerTwo.setScore(playerScore);
     }
 
-    public int calculateWinner(){
-        int playerOneScore = getPlayerScore(1);
-        int playerTwoScore = getPlayerScore(2);
+    protected int calculateWinner(){
+        int playerOneScore = playerOne.getScore();
+        int playerTwoScore = playerTwo.getScore();
         if (playerOneScore > playerTwoScore){
             return P1WIN;
         } else if (playerOneScore < playerTwoScore){
@@ -187,127 +186,35 @@ public class Kalah {
         }
     }
 
-    public int getPlayerScore(int player){
-        int playerScore;
-        if (player == P1) {
-            playerScore = board.getPlayerOneStore().getSeeds();
-            for (House house : board.getPlayerHouses(1)) {
-                playerScore += house.getSeeds();
-            }
-        } else {
-            playerScore = board.getPlayerTwoStore().getSeeds();
-            for (House house : board.getPlayerHouses(2)) {
-                playerScore += house.getSeeds();
-            }
-        }
-        return playerScore;
-    }
-
-    public void drawWinner(IO io){
-        io.println("Game over");
-        drawBoard(io);
-        io.println("\tplayer 1:"+getPlayerScore(1));
-        io.println("\tplayer 2:"+getPlayerScore(2));
-        switch (calculateWinner()){
-            case TIE:
-                io.println("A tie!");
-                break;
-            case P1WIN:
-                io.println("Player 1 wins!");
-                break;
-            case P2WIN:
-                io.println("Player 2 wins!");
-                break;
-        }
-    }
-
-    public boolean isGameOver(){
+    protected boolean isGameOver(){
+        // If game was quit prematurely
         if (quitGame){
             return true;
         }
-        boolean flag = true;
 
+        // Otherwise check if a player 1's houses are empty
+        boolean flag = true;
         for(House house : board.getPlayerHouses(1)){
             if (house.getSeeds() != 0){
                 flag = false;
             }
         }
-        if (flag && player == P1){
+        if (flag && currentPlayer == P1){
             return true;
         }
+
+        // check if player 2's houses are empty
         flag = true;
         for(House house : board.getPlayerHouses(2)){
             if (house.getSeeds() != 0){
                 flag = false;
             }
         }
-        if (flag && player == P2){
+        if (flag && currentPlayer == P2){
             return true;
         }
+
+        // If we get here, game is not over
         return false;
-    }
-
-    public void drawBoard(IO io) {
-        drawTopOrBotLine(io);
-        drawP2Line(io);
-        drawMidLine(io);
-        drawP1Line(io);
-        drawTopOrBotLine(io);
-    }
-
-    public void drawTopOrBotLine(IO io){
-        io.print("+----+");
-        for (int i = 0; i < NUMBER_OF_HOUSES; i++){
-            io.print("-------+");
-        }
-        io.println("----+");
-    }
-
-    public void drawP2Line(IO io){
-        // Player 2 Store
-        io.print("| P2 |");
-
-        // Player 1 houses
-        for (int i = 1; i < NUMBER_OF_HOUSES + 1;  i++) {
-            io.print(" " + (NUMBER_OF_HOUSES+1-i));
-            if (board.getHouse(2, i).getSeeds() > 9){
-                io.print("[" + board.getHouse(2,i).getSeeds() + "] |");
-            } else {
-                io.print("[ "+ board.getHouse(2,i).getSeeds() + "] |");
-            }
-        }
-
-        // Player 1 store seeds
-        if (board.getPlayerOneStore().getSeeds() < 10) {
-            io.println("  " + board.getPlayerOneStore().getSeeds() + " |");
-        } else{
-            io.println(" " + board.getPlayerOneStore().getSeeds() + " |");
-        }
-    }
-
-    public void drawMidLine(IO io){
-        io.print("|    |");
-        for (int i = 0; i < NUMBER_OF_HOUSES - 1; i++){
-            io.print("-------+");
-        }
-        io.println("-------|    |");
-    }
-
-    public void drawP1Line(IO io){
-        if (board.getPlayerTwoStore().getSeeds() < 10) {
-            io.print("|  ");
-        } else{
-            io.print("| ");
-        }
-        io.print(board.getPlayerTwoStore().getSeeds() + " |");
-        for (int i = 1; i < NUMBER_OF_HOUSES + 1;  i++) {
-            io.print(" " + i);
-            if (board.getHouse(1, i).getSeeds() > 9){
-                io.print("[" + board.getHouse(1,i).getSeeds() + "] |");
-            } else {
-                io.print("[ "+ board.getHouse(1,i).getSeeds() + "] |");
-            }
-        }
-        io.println(" P1 |");
     }
 }

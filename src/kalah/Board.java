@@ -6,13 +6,15 @@ import java.util.HashSet;
 
 public class Board{
     private House[][] houses;
-    private House playerOneStore;
-    private House playerTwoStore;
+    private Store playerOneStore;
+    private Store playerTwoStore;
+    private int boardSize;
 
-    public Board(int numberOfHouses, int startingSeeds){
-        playerOneStore = new House(0);
-        playerTwoStore = new House(0);
+    protected Board(int numberOfHouses, int startingSeeds){
+        playerOneStore = new Store(0);
+        playerTwoStore = new Store(0);
         houses = new House[2][numberOfHouses];
+        boardSize = numberOfHouses;
 
         for(int i=0; i<2; i++){
             for(int j=0; j<numberOfHouses; j++){
@@ -21,7 +23,7 @@ public class Board{
         }
     }
 
-    public House getHouse(int player, int number){
+    protected House getHouse(int player, int number){
         if (player == 1) {
             return houses[1][number - 1];
         } else {
@@ -29,7 +31,7 @@ public class Board{
         }
     }
 
-    public House[] getPlayerHouses(int player){
+    protected House[] getPlayerHouses(int player){
         if (player == 1) {
             return houses[1];
         } else {
@@ -37,15 +39,15 @@ public class Board{
         }
     }
 
-    public void incrementSeeds(House house, int seeds){
-        house.setSeeds(house.getSeeds() + seeds);
+    protected int getBoardSize(){
+        return boardSize;
     }
 
-    public House getPlayerOneStore(){
+    protected Store getPlayerOneStore(){
         return playerOneStore;
     }
 
-    public House getPlayerTwoStore(){
+    protected Store getPlayerTwoStore(){
         return playerTwoStore;
     }
 }
